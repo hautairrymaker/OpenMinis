@@ -29,7 +29,13 @@ concurrency:
 jobs:
   build:
     name: Build iOS app
-    runs-on: macos-15
+    # The project targets iOS 26.2 / Swift 6.0 and uses iOS 26-only API
+    # (`glassEffect`, …). macos-15 ships Xcode 16.4, which has neither the SDK
+    # nor those symbols, so the build dies with "'...Content' has no member
+    # 'glassEffect'". macOS 26 images carry Xcode 26+. `macos-latest` already
+    # resolves to macOS 26 but the explicit label keeps this from drifting when
+    # `-latest` migrates again.
+    runs-on: macos-26
     timeout-minutes: 120
 
     steps:
@@ -85,7 +91,13 @@ jobs:
           go version
 
       - name: Download Metal Toolchain
-        run: xcodebuild -downloadComponent MetalToolchain || echo "Metal toolchain unavailable; FFmpeg will drop the Metal deinterlacer"
+        continue-on-error: true
+        run: |
+          # Available only on newer Xcode; FFmpeg's configure probes for the
+          # `metal` compiler and silently drops the Metal deinterlacer if it is
+          # missing. A failure here must not fail the job.
+          xcodebuild -downloadComponent MetalToolchain \
+            || echo "::warning::Metal toolchain unavailable — FFmpeg will drop the Metal deinterlacer"
 
       - name: Copy build-time config templates
         run: |
