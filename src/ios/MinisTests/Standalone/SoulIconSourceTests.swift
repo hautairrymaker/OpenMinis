@@ -306,7 +306,7 @@ for needle in ["data:image/png;base64,iVBORw0KGgo",
                "/var/minis/attachments/icon.png",
                "https://example.com/icon.png",
                "bare base64",
-               "96×96",
+               "384×384",
                "--file /tmp/icon-value.json",
                "\\\"<image>\\\""] {
     check("help mentions `\(needle)`", builtinsSource.contains(needle))

@@ -49,14 +49,14 @@ struct BridgedAssistantHeaderV3: View {
             // height seed below was re-measured to match.
             SoulIconView(
                 icon: soulMeta.icon,
-                size: 22,
+                size: AssistantHeaderMetrics.iconPoints,
                 sparkleGradient: LinearGradient(
                     colors: [Color(red: 0.72, green: 0.69, blue: 0.59),
                              Color(red: 0.6, green: 0.6, blue: 0.55)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ),
-                cornerRadius: 5
+                cornerRadius: 8
             )
             Text(soulMeta.name.isEmpty ? "Minis" : soulMeta.name)
                 .font(.body.weight(.semibold))

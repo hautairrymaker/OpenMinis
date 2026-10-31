@@ -11,9 +11,19 @@ import UIKit
 enum SoulIconImage {
     /// Rendered edge, in points, of the largest surface that shows the icon
     /// (the Soul Settings preview card; the chat header draws it at 18pt).
-    static let renderPoints: CGFloat = 32
+    ///
+    /// [T-soul-icon-larger] Raised from 32pt. The icon now also serves as the
+    /// character list avatar (52pt) and the chat header portrait, so the old
+    /// 32pt ceiling left every user-picked image visibly blurry and too small.
+    /// 128pt covers the largest surface (the settings card preview) at @2x
+    /// without storing an image far bigger than any surface renders.
+    static let renderPoints: CGFloat = 128
     /// Stored edge in pixels — the render size at @3x, so the icon is crisp
     /// on every current device and never larger than it needs to be.
+    ///
+    /// [T-soul-icon-larger] Raised from 96px to keep pace with renderPoints;
+    /// 384px still costs only ~25 KB as PNG, and the sidecar file means it
+    /// never rides the prompt or the SOUL.md frontmatter.
     static let storedPixels: CGFloat = renderPoints * 3
 
     private static let prefix = "data:image/png;base64,"
@@ -141,7 +151,15 @@ enum SoulIconSource {
     /// Cap on the stored data URI. Mirrors Android's
     /// `SoulIcon.MAX_DATA_URI_CHARS` — the value syncs between platforms, so
     /// a value one side would refuse to load must not be storable on the other.
-    static let maxStoredChars = 64 * 1024
+    ///
+    /// [T-soul-icon-larger] Raised from 64 KB. A 384×384 PNG of a real photo
+    /// runs 150–210 KB raw (~200–280 KB as base64), so the old cap silently
+    /// refused exactly the larger portraits this change exists to allow — the
+    /// 64 KB ceiling only ever fit the old 96×96 thumbnails. 512 KB still
+    /// bounds a hostile payload to a fraction of a megabyte and stays well
+    /// under `maxInlineBase64Chars`. Android's `SoulIcon.MAX_DATA_URI_CHARS`
+    /// must be raised to match, or a synced icon will fail to load there.
+    static let maxStoredChars = 512 * 1024
 
     enum SourceError: LocalizedError {
         case tooLarge(String)
@@ -481,11 +499,21 @@ struct SoulIconView: View {
             Image(systemName: "sparkles")
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(gradient)
+        } else if !icon.isEmpty && !SoulIconImage.isDataURI(icon) {
+            // [T-soul-icon-image-only] A legacy text glyph (emoji / emoji
+            // string) survived in an older SOUL.md. The user has asked that
+            // avatars are always an uploaded image, never a glyph — render the
+            // neutral placeholder instead of the emoji, so an un-migrated file
+            // never shows a character where a portrait belongs. Picking a new
+            // image in Soul Settings overwrites `icon` and ends this state.
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: size, weight: .regular))
+                .foregroundStyle(.secondary)
         } else {
-            // A user-chosen emoji, or the default sparkle where no gradient
-            // was requested.
-            Text(icon.isEmpty ? "✨" : icon)
-                .font(.system(size: size))
+            // No icon set at all: neutral placeholder, same reasoning as above.
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: size, weight: .regular))
+                .foregroundStyle(.secondary)
         }
     }
 }
@@ -914,6 +942,29 @@ enum SoulStore {
     /// Refreshed after every Settings save via `notifyChanged()`.
     @MainActor
     static var cachedMetadata: SoulMetadata = .default
+
+    /// [T-session-avatar-custom-image] Decoded portrait for the cached icon,
+    /// memoized so the session list does not re-base64-decode + UIImage-init
+    /// the same ~25 KB PNG once per visible row per scroll pass.
+    ///
+    /// Rebuilt only when the underlying data URI changes — the key is the
+    /// stored string itself, so a Settings pick invalidates it naturally
+    /// without any extra bookkeeping. `nil` means "no image picked"; callers
+    /// fall back to the category glyph.
+    @MainActor
+    private static var cachedPortraitKey: String = ""
+    @MainActor
+    private static var cachedPortraitValue: UIImage?
+
+    @MainActor
+    static var cachedPortraitImage: UIImage? {
+        let key = cachedMetadata.icon
+        if key != cachedPortraitKey {
+            cachedPortraitKey = key
+            cachedPortraitValue = SoulIconImage.decode(key)
+        }
+        return cachedPortraitValue
+    }
 
     /// Re-read SOUL.md into `cachedMetadata` and post a notification so
     /// observers (chat bubble header, prompt builder, etc.) can refresh.

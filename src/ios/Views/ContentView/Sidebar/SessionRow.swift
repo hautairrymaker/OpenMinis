@@ -223,16 +223,16 @@ struct SessionRow: View, Equatable {
         HStack(spacing: 8) {
             // Provider icon with optional spinning/suspended ring
             providerIcon
-                .frame(width: 44, height: 44)
+                .frame(width: 52, height: 52)
                 .background(iconBackgroundColor.opacity(isHighlighted ? 0.35 : 0.18))
                 .clipShape(Circle())
                 .overlay {
                     if isSuspended {
                         SuspendedRing(color: .yellow)
-                            .frame(width: 42, height: 42)
+                            .frame(width: 50, height: 50)
                     } else if isActive {
-                        SpinningRing(color: iconBackgroundColor)
-                            .frame(width: 42, height: 42)
+                        SpinningRing(color: iconBackgroundColor == .clear ? Color.accentColor : iconBackgroundColor)
+                            .frame(width: 50, height: 50)
                     }
                 }
                 .overlay(alignment: .bottomTrailing) {
@@ -434,15 +434,33 @@ struct SessionRow: View, Equatable {
 
     @ViewBuilder
     private var providerIcon: some View {
-        let icon = categoryIcon
-        let size: CGFloat = (icon.systemName == "bubble.left.fill" || icon.systemName == "terminal.fill") ? 18 : 20
-        Image(systemName: icon.systemName)
-            .font(.system(size: size))
-            .foregroundStyle(icon.color)
+        // [T-session-avatar-custom-image] A session shows the Soul identity
+        // portrait when one is set, at the row's own size. The category glyph
+        // is the fallback only when no image has been picked.
+        Group {
+            if let portrait = portraitImage {
+                Image(uiImage: portrait)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                let icon = categoryIcon
+                Image(systemName: icon.systemName)
+                    .font(.system(size: 26))
+                    .foregroundStyle(icon.color)
+            }
+        }
     }
 
+    /// The Soul portrait, or nil when none is set.
+    ///
+    /// `SoulStore.cachedPortraitImage` memoizes the base64 decode, so the
+    /// repeated read here is a dictionary-free string compare, not a decode.
+    /// Whether a portrait exists also decides the icon's backing tint, so the
+    /// two must agree — they both read this same value.
+    private var portraitImage: UIImage? { SoulStore.cachedPortraitImage }
+
     private var iconBackgroundColor: Color {
-        categoryIcon.color
+        portraitImage != nil ? .clear : categoryIcon.color
     }
 
     private func relativeDate(_ date: Date) -> String {
@@ -555,8 +573,8 @@ struct RemoteSessionRow: View {
         HStack(spacing: 8) {
             // Category icon with iCloud badge
             providerIcon
-                .frame(width: 44, height: 44)
-                .background(iconColor.opacity(0.18))
+                .frame(width: 52, height: 52)
+                .background(SoulStore.cachedPortraitImage != nil ? Color.clear : iconColor.opacity(0.18))
                 .clipShape(Circle())
                 .overlay(alignment: .bottomTrailing) {
                     Image(systemName: "icloud.fill")
@@ -594,11 +612,19 @@ struct RemoteSessionRow: View {
 
     @ViewBuilder
     private var providerIcon: some View {
-        let icon = categoryIcon
-        let size: CGFloat = (icon.systemName == "bubble.left.fill" || icon.systemName == "terminal.fill") ? 18 : 20
-        Image(systemName: icon.systemName)
-            .font(.system(size: size))
-            .foregroundStyle(icon.color)
+        // [T-session-avatar-custom-image] Same portrait rule as SessionRow:
+        // a remote session also belongs to the same Soul identity, so it shows
+        // the picked portrait rather than a category glyph.
+        if let portrait = SoulStore.cachedPortraitImage {
+            Image(uiImage: portrait)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        } else {
+            let icon = categoryIcon
+            Image(systemName: icon.systemName)
+                .font(.system(size: 24))
+                .foregroundStyle(icon.color)
+        }
     }
 }
 

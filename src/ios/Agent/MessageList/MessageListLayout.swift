@@ -1066,10 +1066,20 @@ final class MessageListLayout: UICollectionViewLayout {
 /// beside the semibold body-font name, `.padding(.top, 4)`. 26 pt at the default
 /// text size; Dynamic Type grows it with the name's line height.
 enum AssistantHeaderMetrics {
+    /// Height of the assistant-header row, in points.
+    ///
+    /// [T-avatar-36] The Soul portrait is 36pt and is now taller than the
+    /// `.body` name line at default type sizes, so the icon — not the text —
+    /// sets the row. 36 + 4 top padding = 40. Keep this in lock-step with the
+    /// `size:` passed to `SoulIconView` in BridgedAssistantHeaderV3; a drift
+    /// makes every header jump by the delta as it scrolls into view.
+    static let iconPoints: CGFloat = 36
+    static let topPadding: CGFloat = 4
+
     static func formulaHeight() -> CGFloat {
         let body = UIFont.preferredFont(forTextStyle: .body)
         let name = UIFont.systemFont(ofSize: body.pointSize, weight: .semibold)
-        return ceil(max(22, name.lineHeight)) + 4
+        return ceil(max(iconPoints, name.lineHeight)) + topPadding
     }
 
     /// What a learned header height depends on besides width: the body size.

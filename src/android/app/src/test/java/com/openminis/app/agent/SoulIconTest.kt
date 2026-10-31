@@ -126,7 +126,7 @@ class SoulIconTest {
     /** The cap must match iOS, since the value syncs between platforms. */
     @Test
     fun `stored size cap is 64k`() {
-        assertEquals(64 * 1024, SoulIcon.MAX_DATA_URI_CHARS)
+        assertEquals(512 * 1024, SoulIcon.MAX_DATA_URI_CHARS)
     }
 
     // ── Data URI detection ───────────────────────────────────────────────

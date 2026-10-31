@@ -210,7 +210,7 @@ extension ConfigRegistry {
                 + "when the source has it.\n"
                 + "\n"
                 + "PROCESSING — identical to picking an image in Settings → Soul: "
-                + "the image is centre-cropped to a square, downscaled to 96×96 and re-encoded as PNG, "
+                + "the image is centre-cropped to a square, downscaled to 384×384 and re-encoded as PNG, "
                 + "then stored inline. An address is only an import source — "
                 + "it is never persisted, so the file can be deleted afterwards and the icon survives "
                 + "attachment cleanup and syncing to other devices.\n"

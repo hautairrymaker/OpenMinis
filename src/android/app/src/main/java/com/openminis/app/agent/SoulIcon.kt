@@ -19,16 +19,29 @@ object SoulIcon {
     /** The stored prefix. PNG specifically: it is the format we re-encode to. */
     const val DATA_URI_PREFIX = "data:image/png;base64,"
 
-    /** Longest edge of the stored bitmap, in pixels. ~1-4 KB as a data URI. */
-    const val STORED_PIXELS = 96
+    /**
+     * Longest edge of the stored bitmap, in pixels.
+     *
+     * [T-soul-icon-larger] Raised from 96 to match iOS's
+     * `SoulIconImage.storedPixels`. The icon is now the character-list avatar
+     * (52dp) and the chat header portrait (36dp); at 96px it was visibly soft
+     * at both. 384px costs ~150-250 KB as a data URI, which
+     * MAX_DATA_URI_CHARS below accommodates.
+     */
+    const val STORED_PIXELS = 384
 
     /**
-     * Hard cap on the stored string. A 96px PNG lands far below this; the cap
-     * exists so a hand-edited or synced-in SOUL.md cannot put an unbounded
-     * blob on the single frontmatter line (there is no other size guard on
-     * frontmatter, unlike the body which has its own limit).
+     * Hard cap on the stored string. The cap exists so a hand-edited or
+     * synced-in SOUL.md cannot put an unbounded blob on the single frontmatter
+     * line (there is no other size guard on frontmatter, unlike the body which
+     * has its own limit).
+     *
+     * [T-soul-icon-larger] Raised from 64 KB. A 384px PNG of a real photo runs
+     * 150-210 KB raw (~200-280 KB as base64), so the old cap refused exactly
+     * the larger portraits the STORED_PIXELS change allows. Must stay equal to
+     * iOS's SoulIconImage.maxStoredChars, or a synced icon fails to load here.
      */
-    const val MAX_DATA_URI_CHARS = 64 * 1024
+    const val MAX_DATA_URI_CHARS = 512 * 1024
 
     fun isDataUri(value: String): Boolean = value.startsWith(DATA_URI_PREFIX)
 
