@@ -48,7 +48,11 @@ jobs:
 
       - name: Install Homebrew dependencies
         run: |
-          brew install ninja llvm libarchive pkg-config go
+          # `lld` provides the linker build_ish.sh asks for via -fuse-ld=lld.
+          # pkgconf (not the `pkg-config` formula alias) is what Homebrew ships;
+          # without it on PATH, configure finds Apple's /usr/bin/false stub,
+          # reports "pkg-config: NO", and silently drops libarchive.
+          brew install ninja llvm lld libarchive pkgconf go
           # Homebrew's python is PEP 668 "externally managed" — a plain
           # `pip install` is refused. Use a venv on PATH instead.
           python3 -m venv "$RUNNER_TEMP/venv"
@@ -56,6 +60,11 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install meson
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/venv/bin/meson" --version
+          # Homebrew's bin must precede /usr/bin so pkgconf wins over the stub.
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+          echo "PKG_CONFIG_PATH=$(brew --prefix libarchive)/lib/pkgconfig" >> "$GITHUB_ENV"
+          echo "$(brew --prefix)/opt/lld/bin" >> "$GITHUB_PATH"
 
       - name: Download Metal Toolchain
         run: xcodebuild -downloadComponent MetalToolchain || echo "Metal toolchain unavailable; FFmpeg will drop the Metal deinterlacer"
