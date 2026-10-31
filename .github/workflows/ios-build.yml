@@ -52,7 +52,7 @@ jobs:
           # pkgconf (not the `pkg-config` formula alias) is what Homebrew ships;
           # without it on PATH, configure finds Apple's /usr/bin/false stub,
           # reports "pkg-config: NO", and silently drops libarchive.
-          brew install ninja llvm lld libarchive pkgconf go
+          brew install ninja llvm lld libarchive pkgconf
           # Homebrew's python is PEP 668 "externally managed" — a plain
           # `pip install` is refused. Use a venv on PATH instead.
           python3 -m venv "$RUNNER_TEMP/venv"
@@ -65,6 +65,24 @@ jobs:
           echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
           echo "PKG_CONFIG_PATH=$(brew --prefix libarchive)/lib/pkgconfig" >> "$GITHUB_ENV"
           echo "$(brew --prefix)/opt/lld/bin" >> "$GITHUB_PATH"
+
+      # rclone-mobile's go.mod asks for go 1.25.5, and its rclone v1.75.0
+      # dependency compiles against go-json-experiment's 1.25-era API. The
+      # runner's preinstalled Go (1.27.x) is new enough that those symbols
+      # moved, so an unpinned toolchain fails with "undefined: json.SkipFunc".
+      # GOTOOLCHAIN=local makes go honour this exact version instead of
+      # silently upgrading to whatever go.mod's toolchain line requests.
+      - name: Install pinned Go toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.5'
+          check-latest: false
+          cache: false
+
+      - name: Pin GOTOOLCHAIN
+        run: |
+          echo "GOTOOLCHAIN=local" >> "$GITHUB_ENV"
+          go version
 
       - name: Download Metal Toolchain
         run: xcodebuild -downloadComponent MetalToolchain || echo "Metal toolchain unavailable; FFmpeg will drop the Metal deinterlacer"
